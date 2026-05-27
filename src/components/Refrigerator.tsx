@@ -71,7 +71,7 @@ export default function Refrigerator() {
   );
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white p-4 md:p-8">
+    <div className="p-4 md:p-8">
       <div className="max-w-2xl mx-auto">
         {/* Header */}
         <div className="mb-8">
