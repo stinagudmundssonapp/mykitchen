@@ -1,35 +1,29 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Geist } from "next/font/google";
 import { RefrigeratorProvider } from "@/context/RefrigeratorContext";
+import AppShell from "@/components/AppShell";
 import "./globals.css";
 
-const geistSans = Geist({
+const geist = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
-
 export const metadata: Metadata = {
-  title: "MyKitchen",
-  description: "Smart kjøleskaps-app som hjelper deg med middagsplanlegging",
+  title: "MyKitchen — Smart kjøkkenassistent",
+  description:
+    "Hold orden på kjøleskapet, planlegg middager med AI, og handle smartere.",
 };
 
 export default function RootLayout({
   children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+}: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html
-      lang="no"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
-    >
-      <body className="min-h-full flex flex-col">
-        <RefrigeratorProvider>{children}</RefrigeratorProvider>
+    <html lang="no" className={geist.variable}>
+      <body className="min-h-dvh bg-cream text-ink antialiased">
+        <RefrigeratorProvider>
+          <AppShell>{children}</AppShell>
+        </RefrigeratorProvider>
       </body>
     </html>
   );

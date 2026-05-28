@@ -1,26 +1,117 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+/* =========================================
+   MyKitchen Design System
+   Premium, muted, sage-forward palette
+   No orange. Linear/Notion/Cal.com vibe.
+   ========================================= */
+
+@theme {
+  /* Surfaces */
+  --color-cream: #FAFAF7;
+  --color-cream-deep: #F4F2EC;
+  --color-surface: #FFFFFF;
+  --color-surface-2: #F7F5EF;
+
+  /* Borders & hairlines */
+  --color-line: #E8E5DD;
+  --color-line-soft: #EFEDE6;
+
+  /* Text */
+  --color-ink: #1A1A1A;
+  --color-ink-2: #4B4B4B;
+  --color-ink-3: #8A8A85;
+  --color-ink-4: #B0AEA8;
+
+  /* Sage primary — muted, mossy green */
+  --color-sage-50: #F1F4F0;
+  --color-sage-100: #DDE5DA;
+  --color-sage-200: #C0CFBC;
+  --color-sage-300: #9DB397;
+  --color-sage-400: #7C9885;
+  --color-sage-500: #5F7E68;
+  --color-sage-600: #4A6B5E;
+  --color-sage-700: #36544A;
+  --color-sage-800: #243B33;
+
+  /* Deep teal accent (sparingly) */
+  --color-teal: #2D5F5F;
+  --color-teal-deep: #1F4848;
+
+  /* Status colors — muted, never neon */
+  --color-warn: #C9A961;          /* dusty mustard for "snart ut" */
+  --color-warn-soft: #F5EBCF;
+  --color-danger: #B85C5C;         /* dusty red for expired */
+  --color-danger-soft: #F2DCDC;
+
+  /* Typography */
+  --font-sans: var(--font-geist-sans), "Inter", system-ui, -apple-system, sans-serif;
+  --font-display: var(--font-geist-sans), "Inter", system-ui, sans-serif;
+
+  /* Radii */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+  --radius-2xl: 32px;
+
+  /* Shadows — soft, never harsh */
+  --shadow-xs: 0 1px 2px rgba(36, 59, 51, 0.04);
+  --shadow-sm: 0 1px 3px rgba(36, 59, 51, 0.06), 0 1px 2px rgba(36, 59, 51, 0.04);
+  --shadow-md: 0 4px 12px rgba(36, 59, 51, 0.07), 0 2px 4px rgba(36, 59, 51, 0.04);
+  --shadow-lg: 0 12px 32px rgba(36, 59, 51, 0.10), 0 4px 8px rgba(36, 59, 51, 0.04);
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* =========================================
+   Base
+   ========================================= */
+html,
+body {
+  background: var(--color-cream);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  min-height: 100dvh;
+}
+
+/* Subtle selection */
+::selection {
+  background: var(--color-sage-200);
+  color: var(--color-sage-800);
+}
+
+/* Remove default focus ring; we'll add intentional ones in components */
+:focus {
+  outline: none;
+}
+:focus-visible {
+  outline: 2px solid var(--color-sage-500);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Smooth scroll on nav */
+html {
+  scroll-behavior: smooth;
+}
+
+/* =========================================
+   Small reusable utility classes
+   (kept here so components can stay clean)
+   ========================================= */
+.card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-sm);
+}
+
+.hairline {
+  height: 1px;
+  background: var(--color-line);
 }
