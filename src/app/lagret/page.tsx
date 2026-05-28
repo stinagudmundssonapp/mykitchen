@@ -7,10 +7,10 @@ import PageHeader from "@/components/PageHeader";
 
 const MOCK_SAVED = [
   {
-    title: "Bestemors fårikål",
+    title: "Pasta cacio e pepe",
     source: "matprat.no",
-    tags: ["Tradisjon", "Søndagsmat"],
-    time: "2 t 30 min",
+    tags: ["Italiensk", "Rask"],
+    time: "20 min",
   },
   {
     title: "Krydret laks med ris",
