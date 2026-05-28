@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import PageHeader from "@/components/PageHeader";
 import { useRefrigerator } from "@/context/RefrigeratorContext";
+import { usePreferences } from "@/context/PreferencesContext";
 
 type Mode = "inventory" | "craving";
 
@@ -33,6 +34,7 @@ const ease = [0.22, 1, 0.36, 1] as const;
 
 export default function OppskrifterPage() {
   const { items } = useRefrigerator();
+  const { prefs } = usePreferences();
   const [mode, setMode] = useState<Mode>("inventory");
   const [craving, setCraving] = useState("");
   const [recipes, setRecipes] = useState<Recipe[]>([]);
@@ -56,6 +58,13 @@ export default function OppskrifterPage() {
         daysInFridge: Math.floor((Date.now() - it.addedDate) / MS_PER_DAY),
       })),
       craving: mode === "craving" ? craving.trim() : undefined,
+      preferences: {
+        allergies: prefs.allergies,
+        diet: prefs.diet,
+        dislikes: prefs.dislikes,
+        household: prefs.household,
+        budget: prefs.budget,
+      },
     };
 
     try {

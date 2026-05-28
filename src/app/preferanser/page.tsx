@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
-import { motion } from "framer-motion";
+import { useEffect, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import { Check } from "lucide-react";
 import PageHeader from "@/components/PageHeader";
+import { usePreferences, type Preferences } from "@/context/PreferencesContext";
 
 const ALLERGIES = [
   "Gluten",
@@ -14,25 +15,31 @@ const ALLERGIES = [
   "Soya",
   "Fisk",
 ];
-const DIETS = ["Alt", "Vegetar", "Vegan", "Pescetarian", "Keto", "Pescetarian"];
-const BUDGETS = [
+const DIETS = ["Alt", "Vegetar", "Vegan", "Pescetarian", "Keto"];
+const BUDGETS: { id: Preferences["budget"]; label: string; sub: string }[] = [
   { id: "low", label: "Lav", sub: "Smart & rimelig" },
   { id: "mid", label: "Middels", sub: "Balansert" },
   { id: "high", label: "Høy", sub: "Kvalitet teller mest" },
 ];
 
 export default function PreferanserPage() {
-  const [allergies, setAllergies] = useState<Set<string>>(new Set());
-  const [diet, setDiet] = useState("Alt");
-  const [dislikes, setDislikes] = useState("");
-  const [household, setHousehold] = useState(2);
-  const [budget, setBudget] = useState("mid");
+  const { prefs, setPrefs, hydrated } = usePreferences();
+  const [savedFlash, setSavedFlash] = useState(false);
 
-  const toggle = (set: Set<string>, val: string) => {
-    const next = new Set(set);
-    if (next.has(val)) next.delete(val);
-    else next.add(val);
-    return next;
+  // Auto-flash "Lagret" briefly after any change (except initial hydration)
+  useEffect(() => {
+    if (!hydrated) return;
+    setSavedFlash(true);
+    const t = setTimeout(() => setSavedFlash(false), 1500);
+    return () => clearTimeout(t);
+  }, [prefs, hydrated]);
+
+  const toggleAllergy = (a: string) => {
+    setPrefs({
+      allergies: prefs.allergies.includes(a)
+        ? prefs.allergies.filter((x) => x !== a)
+        : [...prefs.allergies, a],
+    });
   };
 
   return (
@@ -40,19 +47,35 @@ export default function PreferanserPage() {
       <PageHeader
         eyebrow="Preferanser"
         title="Smaken din"
-        description="Vi bruker dette til å foreslå middager som passer akkurat deg."
+        description="Vi bruker dette til å foreslå middager som passer akkurat deg. Lagres automatisk."
       />
+
+      {/* Floating "Lagret" toast */}
+      <AnimatePresence>
+        {savedFlash && (
+          <motion.div
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.25 }}
+            className="fixed top-20 lg:top-6 right-5 lg:right-12 z-40 bg-sage-600 text-white text-[12px] font-medium px-3 py-1.5 rounded-full shadow-md inline-flex items-center gap-1.5"
+          >
+            <Check size={12} strokeWidth={2.5} />
+            Lagret
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <div className="mt-10 flex flex-col gap-8">
         <Section title="Allergier" hint="Vi unngår disse alltid">
           <div className="flex flex-wrap gap-2">
             {ALLERGIES.map((a) => {
-              const on = allergies.has(a);
+              const on = prefs.allergies.includes(a);
               return (
                 <motion.button
                   key={a}
                   whileTap={{ scale: 0.96 }}
-                  onClick={() => setAllergies(toggle(allergies, a))}
+                  onClick={() => toggleAllergy(a)}
                   className={[
                     "inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full text-[13px] font-medium transition-all",
                     on
@@ -70,13 +93,13 @@ export default function PreferanserPage() {
 
         <Section title="Diett">
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-            {Array.from(new Set(DIETS)).map((d) => {
-              const on = diet === d;
+            {DIETS.map((d) => {
+              const on = prefs.diet === d;
               return (
                 <motion.button
                   key={d}
                   whileTap={{ scale: 0.97 }}
-                  onClick={() => setDiet(d)}
+                  onClick={() => setPrefs({ diet: d })}
                   className={[
                     "py-3 rounded-xl text-[14px] font-medium transition-all",
                     on
@@ -96,8 +119,8 @@ export default function PreferanserPage() {
           hint="Frittekst — skriv det du helst slipper å se"
         >
           <textarea
-            value={dislikes}
-            onChange={(e) => setDislikes(e.target.value)}
+            value={prefs.dislikes}
+            onChange={(e) => setPrefs({ dislikes: e.target.value })}
             rows={3}
             placeholder="f.eks. koriander, oliven, indrefilet…"
             className="w-full bg-surface border border-[var(--color-line)] focus:border-sage-400 rounded-2xl px-4 py-3 text-[14px] placeholder:text-ink-4 transition-colors resize-none"
@@ -107,26 +130,30 @@ export default function PreferanserPage() {
         <Section title="Husholdning" hint="Hvor mange spiser vanligvis?">
           <div className="flex items-center gap-4">
             <button
-              onClick={() => setHousehold((n) => Math.max(1, n - 1))}
+              onClick={() =>
+                setPrefs({ household: Math.max(1, prefs.household - 1) })
+              }
               className="size-11 rounded-xl bg-surface ring-1 ring-[var(--color-line)] hover:ring-sage-200 text-ink-2 transition-all"
             >
               −
             </button>
             <div className="flex-1 text-center">
               <motion.div
-                key={household}
+                key={prefs.household}
                 initial={{ scale: 0.9, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
                 className="text-[32px] font-semibold tracking-tight"
               >
-                {household}
+                {prefs.household}
               </motion.div>
               <div className="text-[12px] text-ink-3">
-                {household === 1 ? "person" : "personer"}
+                {prefs.household === 1 ? "person" : "personer"}
               </div>
             </div>
             <button
-              onClick={() => setHousehold((n) => Math.min(12, n + 1))}
+              onClick={() =>
+                setPrefs({ household: Math.min(12, prefs.household + 1) })
+              }
               className="size-11 rounded-xl bg-surface ring-1 ring-[var(--color-line)] hover:ring-sage-200 text-ink-2 transition-all"
             >
               +
@@ -137,12 +164,12 @@ export default function PreferanserPage() {
         <Section title="Budsjett">
           <div className="grid grid-cols-3 gap-2">
             {BUDGETS.map((b) => {
-              const on = budget === b.id;
+              const on = prefs.budget === b.id;
               return (
                 <motion.button
                   key={b.id}
                   whileTap={{ scale: 0.97 }}
-                  onClick={() => setBudget(b.id)}
+                  onClick={() => setPrefs({ budget: b.id })}
                   className={[
                     "py-3 px-2 rounded-2xl flex flex-col items-center gap-0.5 transition-all",
                     on
@@ -165,11 +192,9 @@ export default function PreferanserPage() {
           </div>
         </Section>
 
-        <div className="pt-2">
-          <button className="w-full bg-sage-600 hover:bg-sage-700 text-white text-[14px] font-medium py-3.5 rounded-xl transition-colors">
-            Lagre preferanser
-          </button>
-        </div>
+        <p className="text-[12px] text-ink-3 text-center pt-2">
+          Alle endringer lagres automatisk på enheten din.
+        </p>
       </div>
     </div>
   );

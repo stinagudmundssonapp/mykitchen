@@ -10,58 +10,10 @@ import {
   Plus,
 } from "lucide-react";
 import PageHeader from "@/components/PageHeader";
-import StoreMap, { type Store } from "@/components/StoreMap";
+import StoreMap from "@/components/StoreMap";
+import { NORWAY_STORES as STORES } from "@/lib/stores";
 
 type SortMode = "cheapest" | "nearest" | "general";
-
-// Real Oslo grocery store locations (approximate, hand-picked)
-const STORES: Store[] = [
-  {
-    id: "kiwi-grunerlokka",
-    name: "Kiwi Grünerløkka",
-    chain: "Kiwi",
-    lng: 10.7591,
-    lat: 59.9239,
-    matchedItems: 4,
-    weeklyEstimate: 248,
-  },
-  {
-    id: "rema-majorstuen",
-    name: "Rema 1000 Majorstuen",
-    chain: "Rema 1000",
-    lng: 10.7128,
-    lat: 59.9295,
-    matchedItems: 5,
-    weeklyEstimate: 232,
-  },
-  {
-    id: "coop-sthanshaugen",
-    name: "Coop Extra St. Hanshaugen",
-    chain: "Coop Extra",
-    lng: 10.7437,
-    lat: 59.9263,
-    matchedItems: 3,
-    weeklyEstimate: 264,
-  },
-  {
-    id: "meny-solli",
-    name: "Meny Solli",
-    chain: "Meny",
-    lng: 10.7194,
-    lat: 59.9156,
-    matchedItems: 6,
-    weeklyEstimate: 281,
-  },
-  {
-    id: "bunnpris-frogner",
-    name: "Bunnpris Frogner",
-    chain: "Bunnpris",
-    lng: 10.7037,
-    lat: 59.9197,
-    matchedItems: 4,
-    weeklyEstimate: 256,
-  },
-];
 
 const FALLBACK_LOCATION = { lng: 10.7522, lat: 59.9111 }; // Oslo S
 

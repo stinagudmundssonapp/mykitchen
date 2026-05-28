@@ -59,9 +59,18 @@ interface IncomingItem {
   daysInFridge: number;
 }
 
+interface IncomingPrefs {
+  allergies?: string[];
+  diet?: string;
+  dislikes?: string;
+  household?: number;
+  budget?: "low" | "mid" | "high";
+}
+
 interface RecipeRequest {
   items: IncomingItem[];
   craving?: string;
+  preferences?: IncomingPrefs;
 }
 
 export async function POST(request: Request) {
@@ -79,7 +88,7 @@ export async function POST(request: Request) {
     return Response.json({ error: 'Ugyldig forespørsel.' }, { status: 400 });
   }
 
-  const { items, craving } = body;
+  const { items, craving, preferences } = body;
 
   if (!Array.isArray(items) || items.length === 0) {
     return Response.json(
@@ -92,9 +101,32 @@ export async function POST(request: Request) {
     .map((item) => `- ${item.name} (${item.daysInFridge} dag(er) gammel)`)
     .join('\n');
 
+  const prefLines: string[] = [];
+  if (preferences?.allergies?.length) {
+    prefLines.push(`- Allergier (må unngås): ${preferences.allergies.join(', ')}`);
+  }
+  if (preferences?.diet && preferences.diet !== 'Alt') {
+    prefLines.push(`- Diett: ${preferences.diet}`);
+  }
+  if (preferences?.dislikes?.trim()) {
+    prefLines.push(`- Misliker: ${preferences.dislikes.trim()}`);
+  }
+  if (preferences?.household) {
+    prefLines.push(
+      `- Husholdning: ${preferences.household} ${preferences.household === 1 ? 'person' : 'personer'}`,
+    );
+  }
+  if (preferences?.budget) {
+    const map = { low: 'lavt budsjett (rimelige ingredienser)', mid: 'middels budsjett', high: 'høyt budsjett (kvalitet teller)' } as const;
+    prefLines.push(`- Budsjett: ${map[preferences.budget]}`);
+  }
+  const prefBlock = prefLines.length
+    ? `\n\nBrukerens preferanser (respekter alltid):\n${prefLines.join('\n')}`
+    : '';
+
   const userMessage = craving?.trim()
-    ? `Jeg har lyst på: "${craving.trim()}"\n\nVarer i kjøleskapet:\n${itemList}\n\nForeslå 3 middager som matcher det jeg har lyst på, og bruker mest mulig av det jeg har.`
-    : `Varer i kjøleskapet:\n${itemList}\n\nForeslå 3 middager basert på dette.`;
+    ? `Jeg har lyst på: "${craving.trim()}"\n\nVarer i kjøleskapet:\n${itemList}${prefBlock}\n\nForeslå 3 middager som matcher det jeg har lyst på, og bruker mest mulig av det jeg har.`
+    : `Varer i kjøleskapet:\n${itemList}${prefBlock}\n\nForeslå 3 middager basert på dette.`;
 
   try {
     const response = await client.messages.create({

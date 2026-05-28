@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Geist } from "next/font/google";
 import { RefrigeratorProvider } from "@/context/RefrigeratorContext";
+import { PreferencesProvider } from "@/context/PreferencesContext";
+import { SavedRecipesProvider } from "@/context/SavedRecipesContext";
 import AppShell from "@/components/AppShell";
 import "./globals.css";
 
@@ -22,7 +24,11 @@ export default function RootLayout({
     <html lang="no" className={geist.variable}>
       <body className="min-h-dvh bg-cream text-ink antialiased">
         <RefrigeratorProvider>
-          <AppShell>{children}</AppShell>
+          <PreferencesProvider>
+            <SavedRecipesProvider>
+              <AppShell>{children}</AppShell>
+            </SavedRecipesProvider>
+          </PreferencesProvider>
         </RefrigeratorProvider>
       </body>
     </html>

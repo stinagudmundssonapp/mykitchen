@@ -1,41 +1,101 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Camera, Upload, Check, X, Sparkles } from "lucide-react";
+import {
+  Camera,
+  Upload,
+  Check,
+  X,
+  Sparkles,
+  AlertCircle,
+} from "lucide-react";
 import PageHeader from "@/components/PageHeader";
 import { useRefrigerator } from "@/context/RefrigeratorContext";
 
-type Detected = { name: string; section: "top" | "middle" | "vegetable" };
-
-const FAKE_DETECTED: Detected[] = [
-  { name: "Tine Melk 1L", section: "middle" },
-  { name: "Egg 12-pakk", section: "top" },
-  { name: "Cherrytomater", section: "vegetable" },
-  { name: "Norvegia", section: "top" },
-  { name: "Røde paprika", section: "vegetable" },
-  { name: "Kyllingfilet 800g", section: "middle" },
-];
+type Detected = {
+  name: string;
+  quantity: number;
+  section: "top" | "middle" | "vegetable";
+};
 
 type Phase = "idle" | "processing" | "results";
 
 export default function ScanPage() {
   const [phase, setPhase] = useState<Phase>("idle");
-  const [accepted, setAccepted] = useState<Record<number, boolean>>(
-    Object.fromEntries(FAKE_DETECTED.map((_, i) => [i, true])),
-  );
+  const [detected, setDetected] = useState<Detected[]>([]);
+  const [accepted, setAccepted] = useState<Set<number>>(new Set());
+  const [error, setError] = useState<string | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
   const { addItem } = useRefrigerator();
 
-  const startScan = () => {
+  const handleFile = async (file: File) => {
     setPhase("processing");
-    setTimeout(() => setPhase("results"), 2000);
+    setError(null);
+    setDetected([]);
+
+    // Show preview
+    const reader = new FileReader();
+    const base64 = await new Promise<string>((resolve, reject) => {
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = () => reject(reader.error);
+      reader.readAsDataURL(file);
+    });
+    setPreviewUrl(base64);
+
+    try {
+      const res = await fetch("/api/scan-receipt", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ image: base64 }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error ?? "Noe gikk galt.");
+        setPhase("idle");
+        return;
+      }
+      const items = (data.items ?? []) as Detected[];
+      if (items.length === 0) {
+        setError("Klarte ikke å lese varer fra dette bildet. Prøv et tydeligere bilde.");
+        setPhase("idle");
+        return;
+      }
+      setDetected(items);
+      setAccepted(new Set(items.map((_, i) => i)));
+      setPhase("results");
+    } catch {
+      setError("Klarte ikke å kontakte serveren.");
+      setPhase("idle");
+    }
+  };
+
+  const onPick = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0];
+    if (f) handleFile(f);
+    e.target.value = ""; // allow re-pick same file
   };
 
   const confirm = () => {
-    FAKE_DETECTED.forEach((d, i) => {
-      if (accepted[i]) addItem(d.name, d.section);
+    detected.forEach((d, i) => {
+      if (accepted.has(i)) {
+        // duplicate by quantity
+        for (let q = 0; q < (d.quantity || 1); q++) {
+          addItem(d.name, d.section);
+        }
+      }
     });
+    reset();
+  };
+
+  const reset = () => {
     setPhase("idle");
+    setDetected([]);
+    setAccepted(new Set());
+    setError(null);
+    setPreviewUrl(null);
   };
 
   return (
@@ -43,7 +103,24 @@ export default function ScanPage() {
       <PageHeader
         eyebrow="Scan"
         title="Scan kvitteringen din"
-        description="Ta et bilde av kvitteringen, så finner vi varene automatisk og legger dem på rett hylle."
+        description="Ta et bilde av kvitteringen, så finner Claude varene og legger dem på rett hylle."
+      />
+
+      {/* Hidden file inputs */}
+      <input
+        ref={cameraInputRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        onChange={onPick}
+        className="hidden"
+      />
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        onChange={onPick}
+        className="hidden"
       />
 
       <div className="mt-8 lg:mt-12">
@@ -65,26 +142,37 @@ export default function ScanPage() {
                   Klar når du er
                 </h2>
                 <p className="text-[14px] text-ink-3 max-w-md">
-                  Vi bruker AI til å lese varer, mengder og hyllekategorier fra
-                  norske kvitteringer.
+                  Vi bruker Claude Vision til å lese varer og hyllekategorier
+                  fra norske kvitteringer.
                 </p>
               </div>
               <div className="w-full max-w-sm flex flex-col gap-2.5">
                 <button
-                  onClick={startScan}
+                  onClick={() => cameraInputRef.current?.click()}
                   className="w-full inline-flex items-center justify-center gap-2 bg-sage-600 hover:bg-sage-700 text-white text-[14px] font-medium rounded-xl py-3.5 transition-colors"
                 >
                   <Camera size={16} strokeWidth={1.75} />
                   Ta bilde av kvittering
                 </button>
                 <button
-                  onClick={startScan}
+                  onClick={() => fileInputRef.current?.click()}
                   className="w-full inline-flex items-center justify-center gap-2 text-[14px] font-medium text-ink-2 hover:text-ink hover:bg-[var(--color-line-soft)] rounded-xl py-3 transition-colors"
                 >
                   <Upload size={16} strokeWidth={1.75} />
                   Last opp bilde
                 </button>
               </div>
+
+              {error && (
+                <div className="w-full max-w-sm rounded-xl bg-[var(--color-danger-soft)]/40 border border-[var(--color-danger-soft)] px-3.5 py-2.5 flex items-start gap-2.5 text-left">
+                  <AlertCircle
+                    size={15}
+                    strokeWidth={1.75}
+                    className="text-[var(--color-danger)] mt-0.5 shrink-0"
+                  />
+                  <span className="text-[12.5px] text-ink-2">{error}</span>
+                </div>
+              )}
             </motion.div>
           )}
 
@@ -96,6 +184,16 @@ export default function ScanPage() {
               exit={{ opacity: 0, y: -8 }}
               className="card p-10 flex flex-col items-center text-center gap-5"
             >
+              {previewUrl && (
+                <div className="relative max-w-[160px] rounded-2xl overflow-hidden ring-1 ring-[var(--color-line)] shadow-sm">
+                  <img
+                    src={previewUrl}
+                    alt="Kvittering"
+                    className="block w-full h-auto"
+                  />
+                  <div className="absolute inset-0 bg-sage-900/10" />
+                </div>
+              )}
               <ProcessingAnimation />
               <div className="flex flex-col gap-1">
                 <h2 className="text-[18px] font-semibold tracking-tight">
@@ -119,7 +217,8 @@ export default function ScanPage() {
               <div className="flex items-center justify-between px-1">
                 <div>
                   <h2 className="text-[16px] font-semibold tracking-tight">
-                    Vi fant {FAKE_DETECTED.length} varer
+                    Vi fant {detected.length}{" "}
+                    {detected.length === 1 ? "vare" : "varer"}
                   </h2>
                   <p className="text-[12.5px] text-ink-3 mt-0.5">
                     Hak av de du vil legge til
@@ -127,19 +226,24 @@ export default function ScanPage() {
                 </div>
                 <span className="inline-flex items-center gap-1 text-[11px] font-medium text-sage-700 bg-sage-50 ring-1 ring-sage-100 px-2.5 py-1 rounded-full">
                   <Sparkles size={11} />
-                  AI
+                  Claude
                 </span>
               </div>
 
               <div className="card divide-y divide-[var(--color-line-soft)]">
-                {FAKE_DETECTED.map((item, i) => {
-                  const checked = accepted[i];
+                {detected.map((item, i) => {
+                  const checked = accepted.has(i);
                   return (
                     <button
                       key={i}
-                      onClick={() =>
-                        setAccepted((s) => ({ ...s, [i]: !s[i] }))
-                      }
+                      onClick={() => {
+                        setAccepted((s) => {
+                          const next = new Set(s);
+                          if (next.has(i)) next.delete(i);
+                          else next.add(i);
+                          return next;
+                        });
+                      }}
                       className="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-[var(--color-line-soft)]/50 transition-colors first:rounded-t-3xl last:rounded-b-3xl text-left"
                     >
                       <span
@@ -155,6 +259,11 @@ export default function ScanPage() {
                       <span className="flex-1 text-[14px] font-medium text-ink">
                         {item.name}
                       </span>
+                      {item.quantity > 1 && (
+                        <span className="text-[11px] font-medium text-ink-3 tabular-nums">
+                          ×{item.quantity}
+                        </span>
+                      )}
                       <span className="text-[11px] text-ink-3 px-2 py-0.5 rounded-full bg-cream-deep">
                         {sectionLabel(item.section)}
                       </span>
@@ -165,16 +274,18 @@ export default function ScanPage() {
 
               <div className="flex gap-2 mt-2">
                 <button
-                  onClick={() => setPhase("idle")}
+                  onClick={reset}
                   className="flex-1 inline-flex items-center justify-center gap-1.5 py-3 rounded-xl text-[14px] font-medium text-ink-2 hover:bg-[var(--color-line-soft)] transition-colors"
                 >
                   <X size={14} /> Avbryt
                 </button>
                 <button
                   onClick={confirm}
-                  className="flex-1 inline-flex items-center justify-center gap-1.5 py-3 rounded-xl text-[14px] font-medium bg-sage-600 hover:bg-sage-700 text-white transition-colors"
+                  disabled={accepted.size === 0}
+                  className="flex-1 inline-flex items-center justify-center gap-1.5 py-3 rounded-xl text-[14px] font-medium bg-sage-600 hover:bg-sage-700 disabled:bg-sage-200 disabled:text-sage-400 text-white transition-colors"
                 >
-                  <Check size={14} /> Legg i kjøleskapet
+                  <Check size={14} /> Legg{" "}
+                  {accepted.size > 0 && `${accepted.size} `}i kjøleskapet
                 </button>
               </div>
             </motion.div>

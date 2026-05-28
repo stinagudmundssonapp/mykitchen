@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Map, {
   Marker,
   Popup,
@@ -31,11 +31,11 @@ const CHAIN_COLORS: Record<Store["chain"], string> = {
   Bunnpris: "#36544A",
 };
 
-// Default centred on Oslo
+// Default centred on southern Norway, zoom out to show major cities
 const DEFAULT_VIEW = {
-  longitude: 10.7522,
-  latitude: 59.9139,
-  zoom: 12.5,
+  longitude: 10.5,
+  latitude: 61.5,
+  zoom: 4.3,
 };
 
 export default function StoreMap({
@@ -51,6 +51,19 @@ export default function StoreMap({
 }) {
   const [popupId, setPopupId] = useState<string | null>(null);
   const [view, setView] = useState(DEFAULT_VIEW);
+  const [hasFocusedUser, setHasFocusedUser] = useState(false);
+
+  // When user location resolves the first time, zoom in to them
+  useEffect(() => {
+    if (userLocation && !hasFocusedUser) {
+      setView({
+        longitude: userLocation.lng,
+        latitude: userLocation.lat,
+        zoom: 12,
+      });
+      setHasFocusedUser(true);
+    }
+  }, [userLocation, hasFocusedUser]);
 
   const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
 
